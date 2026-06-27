@@ -149,6 +149,19 @@ body{font-family:'Inter',system-ui,sans-serif;color:var(--tx);
 .meta{color:var(--mut2);font-size:12.5px;margin-top:0;margin-left:auto;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .gbadge{font-family:'JetBrains Mono';font-size:10px;font-weight:700;color:var(--mut);border:1px solid var(--line);border-radius:6px;padding:2px 6px}
 .star{color:var(--gold);font-size:11px}
+/* ---- top scorers ---- */
+#topScorers:empty{display:none}
+.tscard{margin-top:10px;background:var(--card);border:1px solid var(--line);border-radius:13px;padding:11px 14px}
+.tshead{font-family:'Barlow Condensed';font-weight:700;letter-spacing:.04em;font-size:16px;margin-bottom:9px;display:flex;align-items:baseline;gap:10px}
+.tssub{font-family:'JetBrains Mono';font-weight:500;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut2)}
+.tslist{display:flex;flex-wrap:wrap;gap:8px}
+.tspill{display:inline-flex;align-items:center;gap:7px;background:var(--card2);border:1px solid var(--line);border-radius:999px;padding:4px 10px 4px 6px;font-family:'Barlow Condensed';font-weight:600;font-size:16px}
+.tspill.lead{border-color:var(--goldD);background:var(--greenDim)}
+.tspill .tsr{font-family:'JetBrains Mono';font-size:10px;color:var(--mut2);font-weight:700;min-width:13px;text-align:center}
+.tspill .fl{width:24px;height:17px;border-radius:2px}
+.tspill .flx{min-width:24px;height:17px;font-size:9px}
+.tspill .tsn{white-space:nowrap}
+.tspill .tsg{font-family:'JetBrains Mono';font-weight:700;color:var(--gold);font-size:14px;margin-left:2px}
 /* ---- aligned day-box grid (single / all views) ---- */
 .daybox{background:var(--card);border:1px solid var(--line);border-radius:13px;overflow:hidden;margin-bottom:6px}
 .daybox.ydaybox{background:var(--ydaybg);border-color:var(--ydayborder);box-shadow:inset 6px 0 0 var(--ydayaccent)}
@@ -285,6 +298,7 @@ body{font-family:'Inter',system-ui,sans-serif;color:var(--tx);
 
   <div id="liveBanner"></div>
   <div id="nextUp"></div>
+  <div id="topScorers"></div>
 
   <div class="tabs" id="tabs">
     <button class="tab on" data-v="mine">My teams<span class="c" id="cMine">0</span></button>
@@ -418,9 +432,13 @@ let userResults={}, scoreEdit=false;
 function loadResults(){try{const v=localStorage.getItem("wcResults");if(v)userResults=JSON.parse(v)||{};}catch(e){}}
 function saveResults(){try{localStorage.setItem("wcResults",JSON.stringify(userResults));}catch(e){}}
 let liveResults={}, liveState={}, liveClock={}, liveOK=false, liveStamp=0;
-function scoreFor(utc){
-  if(Object.prototype.hasOwnProperty.call(liveResults,utc))return liveResults[utc];
-  return Object.prototype.hasOwnProperty.call(userResults,utc)?userResults[utc]:RESULTS[utc];
+let goalsByMatch={};
+function mkey(m){return m.ko?(m.utc+'|'+(m.round||'')+'|ko'):(m.utc+'|'+m.a+'|'+m.b);}
+function scoreFor(m){
+  const k=mkey(m);
+  if(Object.prototype.hasOwnProperty.call(liveResults,k))return liveResults[k];
+  if(Object.prototype.hasOwnProperty.call(userResults,k))return userResults[k];
+  return Object.prototype.hasOwnProperty.call(RESULTS,m.utc)?RESULTS[m.utc]:undefined;
 }
 function parseHash(){
   const m=(location.hash||"").match(/teams=([^&]+)/);if(!m)return[];
@@ -431,11 +449,11 @@ function parseHash(){
 const GROUPS_FLAT=new Set(Object.values(GROUPS).flat());
 const TEAM_GROUP={};Object.entries(GROUPS).forEach(([g,ts])=>ts.forEach(t=>TEAM_GROUP[t]=g));
 
-function statusOf(utc,now){
-  const ls=liveState[utc];
+function statusOf(m,now){
+  const ls=liveState[mkey(m)];
   if(ls==='in')return"live";
   if(ls==='post')return"done";
-  const t=new Date(utc).getTime();if(now>=t&&now<t+MATCH_MS)return"live";if(now>=t+MATCH_MS)return"done";return"up";
+  const t=new Date(m.utc).getTime();if(now>=t&&now<t+MATCH_MS)return"live";if(now>=t+MATCH_MS)return"done";return"up";
 }
 /* ---------- live scores from ESPN public feed (no key) ---------- */
 function teamNorm(s){return (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');}
@@ -451,7 +469,7 @@ async function fetchLive(full){
     const url='https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?limit=400&dates='+range;
     const r=await fetch(url,{cache:'no-store'});
     if(!r.ok)throw 0;
-    const j=await r.json();let changed=false;
+    const j=await r.json();let changed=false,goalsChanged=false;
     (j.events||[]).forEach(ev=>{
       const comp=(ev.competitions||[])[0];if(!comp)return;
       const cs=comp.competitors||[];if(cs.length<2)return;
@@ -462,14 +480,30 @@ async function fetchLive(full){
       if(st==='pre')return;
       const s0=parseInt(cs[0].score,10),s1=parseInt(cs[1].score,10);if(isNaN(s0)||isNaN(s1))return;
       const pair=(n0===m.a)?[s0,s1]:[s1,s0];
-      const prev=liveResults[m.utc];
-      if(!prev||prev[0]!==pair[0]||prev[1]!==pair[1]||liveState[m.utc]!==st)changed=true;
-      liveResults[m.utc]=pair;liveState[m.utc]=st;
-      liveClock[m.utc]=(st==='in')?(((comp.status||{}).displayClock)||"LIVE"):'';
+      const mk=mkey(m);
+      const prev=liveResults[mk];
+      if(!prev||prev[0]!==pair[0]||prev[1]!==pair[1]||liveState[mk]!==st)changed=true;
+      liveResults[mk]=pair;liveState[mk]=st;
+      liveClock[mk]=(st==='in')?(((comp.status||{}).displayClock)||"LIVE"):'';
+      const det=comp.details||[];
+      if(det.length){
+        const goals=[];
+        det.forEach(d=>{
+          if(!d.scoringPlay)return;
+          const tp=(((d.type||{}).text)||'').toLowerCase();
+          if(tp.indexOf('own goal')>=0)return;
+          const ath=(d.athletesInvolved||[])[0];if(!ath||!ath.displayName)return;
+          let tn=null;const tid=ath.team&&ath.team.id;
+          if(tid){const c=cs.find(x=>x.team&&x.team.id===tid);if(c)tn=resolveTeam(c.team.displayName);}
+          goals.push({n:ath.displayName,t:tn,pen:tp.indexOf('penalty')>=0});
+        });
+        goalsByMatch[ev.id]=goals;goalsChanged=true;
+      }
     });
     liveOK=true;liveStamp=Date.now();
     try{localStorage.setItem('wcLive',JSON.stringify({r:liveResults,s:liveState,t:liveStamp}));}catch(e){}
-    if(changed)lastMin=-1;
+    if(goalsChanged){try{localStorage.setItem('wcGoals',JSON.stringify(goalsByMatch));}catch(e){}}
+    if(changed||goalsChanged)lastMin=-1;
     renderLiveStat();
   }catch(e){liveOK=false;renderLiveStat();}
 }
@@ -499,20 +533,20 @@ function updateBar(){document.getElementById('barCount').textContent=followed.si
 
 function teamsHTML(m,hl){
   const ta=(hl&&followed.has(m.a))?' favt':'';const tb=(hl&&followed.has(m.b))?' favt':'';
-  const sc=scoreFor(m.utc);
+  const sc=scoreFor(m);
   const mid=sc
     ?'<span class="score'+(sc[0]>sc[1]?' wA':sc[1]>sc[0]?' wB':'')+'">'+sc[0]+'<i>–</i>'+sc[1]+'</span>'
     :'<span class="v">vs</span>';
   return '<span class="tline"><span class="t'+ta+'">'+flag(m.a)+esc(m.a)+'</span>'+mid+'<span class="t'+tb+'">'+flag(m.b)+esc(m.b)+'</span></span>';
 }
 function rowHTML(m,now,hl){
-  const st=statusOf(m.utc,now);const fav=!m.ko&&hl&&(followed.has(m.a)||followed.has(m.b));
-  const hasSc=!m.ko&&scoreFor(m.utc);const editable=scoreEdit&&!m.ko;
+  const st=statusOf(m,now);const fav=!m.ko&&hl&&(followed.has(m.a)||followed.has(m.b));
+  const hasSc=!m.ko&&scoreFor(m);const editable=scoreEdit&&!m.ko;
   const cls='row '+(st==='live'?'live ':(st==='done'&&!hasSc)?'done ':'')+(fav?'fav ':'')+(editable?'editable':'');
-  const stTag=st==='live'?'<small class="lv">● '+(liveClock[m.utc]||'LIVE')+'</small>':(st==='done'||hasSc)?'<small class="ft">FULL TIME</small>':'<small class="up">KICKOFF</small>';
+  const stTag=st==='live'?'<small class="lv">● '+(liveClock[mkey(m)]||'LIVE')+'</small>':(st==='done'||hasSc)?'<small class="ft">FULL TIME</small>':'<small class="up">KICKOFF</small>';
   const fix=m.ko?'<span class="tline"><span class="koTag">'+m.round+'</span><span class="v" style="margin-left:6px">· teams TBD</span></span>':teamsHTML(m,hl);
   const meta='<div class="meta">'+(fav?'<span class="star">★ following</span>':'')+'<span>📍 '+esc(m.venue)+'</span>'+(!m.ko?'<span class="gbadge gbtn" data-group="'+m.group+'">GROUP '+m.group+'</span>':'')+'</div>';
-  return '<div class="'+cls.trim()+'"'+(editable?' data-utc="'+m.utc+'"':'')+'><div class="tm">'+timeLabel(m.utc)+stTag+'</div><div class="fix">'+fix+meta+'</div></div>';
+  return '<div class="'+cls.trim()+'"'+(editable?' data-mk="'+mkey(m)+'"':'')+'><div class="tm">'+timeLabel(m.utc)+stTag+'</div><div class="fix">'+fix+meta+'</div></div>';
 }
 function dayGroups(list){
   const map=new Map();list.forEach(m=>{const k=dayKey(m.utc);if(!map.has(k))map.set(k,[]);map.get(k).push(m);});
@@ -528,14 +562,14 @@ function updateCounts(){
   const tk=dayKey(Date.now());document.getElementById('cPast').textContent=ALL.filter(m=>dayKey(m.utc)<tk).length;
 }
 function renderClock(now){document.getElementById('clock').textContent=new Date(now).toLocaleTimeString("en-US",{timeZone:TZ,hour:"numeric",minute:"2-digit",second:"2-digit",hour12:true});}
-function renderLiveBanner(now){const n=ALL.filter(m=>statusOf(m.utc,now)==='live').length;document.getElementById('liveBanner').innerHTML=n?'<div class="live-banner"><span class="pill">● LIVE</span>'+n+' match'+(n>1?'es':'')+' being played right now.</div>':'';}
+function renderLiveBanner(now){const n=ALL.filter(m=>statusOf(m,now)==='live').length;document.getElementById('liveBanner').innerHTML=n?'<div class="live-banner"><span class="pill">● LIVE</span>'+n+' match'+(n>1?'es':'')+' being played right now.</div>':'';}
 
 function renderNextShell(now){
   const el=document.getElementById('nextUp');
   const mine=GS.filter(m=>followed.has(m.a)||followed.has(m.b)).filter(m=>new Date(m.utc).getTime()+MATCH_MS>now).sort((a,b)=>new Date(a.utc)-new Date(b.utc));
   curNext=mine[0]||null;
   if(!curNext){el.innerHTML='';return;}
-  const m=curNext,live=statusOf(m.utc,now)==='live';
+  const m=curNext,live=statusOf(m,now)==='live';
   el.innerHTML='<div class="next nextclick" data-group="'+m.group+'" title="Open Group '+m.group+'"><div class="next-in">'+
     '<div class="next-top"><span class="next-lab">⏱ '+(live?'Your team is playing':'Next up')+'</span>'+
     '<span class="next-meta"><span>🕒 '+timeLabel(m.utc)+' · '+dayLabel(m.utc)+'</span><span>📍 '+esc(m.venue)+'</span><span>Group '+m.group+'</span></span></div>'+
@@ -544,7 +578,7 @@ function renderNextShell(now){
 }
 function updateCountdown(now){
   const box=document.getElementById('cdBox');if(!box||!curNext)return;
-  if(statusOf(curNext.utc,now)==='live'){box.innerHTML='<div><span>●</span><small>LIVE NOW</small></div>';return;}
+  if(statusOf(curNext,now)==='live'){box.innerHTML='<div><span>●</span><small>LIVE NOW</small></div>';return;}
   let s=Math.max(0,Math.floor((new Date(curNext.utc).getTime()-now)/1000));
   const d=Math.floor(s/86400);s-=d*86400;const h=Math.floor(s/3600);s-=h*3600;const mi=Math.floor(s/60);s-=mi*60;
   box.innerHTML=[['D',d],['H',h],['M',mi],['S',s]].map(p=>'<div><span>'+String(p[1]).padStart(2,'0')+'</span><small>'+p[0]+'</small></div>').join('');
@@ -571,8 +605,8 @@ function renderList(now){
   }
 }
 function rowGridHTML(m,now,hl){
-  const st=statusOf(m.utc,now);
-  const stTag=st==='live'?'<small class="lv">● '+(liveClock[m.utc]||'LIVE')+'</small>':((st==='done'||(!m.ko&&scoreFor(m.utc)))?'<small class="ft">FULL TIME</small>':'<small class="up">KICKOFF</small>');
+  const st=statusOf(m,now);
+  const stTag=st==='live'?'<small class="lv">● '+(liveClock[mkey(m)]||'LIVE')+'</small>':((st==='done'||(!m.ko&&scoreFor(m)))?'<small class="ft">FULL TIME</small>':'<small class="up">KICKOFF</small>');
   const tm='<div class="c-tm">'+timeLabel(m.utc)+stTag+'</div>';
   if(m.ko){
     return '<div class="grow'+(st==='live'?' live':'')+'">'+tm+
@@ -580,18 +614,37 @@ function rowGridHTML(m,now,hl){
       '<div class="c-meta"><span>📍 '+esc(m.venue)+'</span></div></div>';
   }
   const fav=hl&&(followed.has(m.a)||followed.has(m.b));
-  const sc=scoreFor(m.utc);const editable=scoreEdit;
+  const sc=scoreFor(m);const editable=scoreEdit;
   const mid=sc?'<span class="score'+(sc[0]>sc[1]?' wA':sc[1]>sc[0]?' wB':'')+'">'+sc[0]+'<i>–</i>'+sc[1]+'</span>':'<span class="v">vs</span>';
   const ta=(hl&&followed.has(m.a))?' favt':'';const tb=(hl&&followed.has(m.b))?' favt':'';
   const cls='grow '+(st==='live'?'live ':(st==='done'&&!sc)?'done ':'')+(fav?'fav ':'')+(editable?'editable':'');
-  return '<div class="'+cls.trim()+'"'+(editable?' data-utc="'+m.utc+'"':'')+'>'+tm+
+  return '<div class="'+cls.trim()+'"'+(editable?' data-mk="'+mkey(m)+'"':'')+'>'+tm+
     '<div class="c-ta'+ta+'"><span class="nm">'+esc(m.a)+'</span><span class="flagbtn" data-group="'+m.group+'">'+flag(m.a)+'</span></div>'+
     '<div class="c-vs">'+mid+'</div>'+
     '<div class="c-tb'+tb+'"><span class="flagbtn" data-group="'+m.group+'">'+flag(m.b)+'</span><span class="nm">'+esc(m.b)+'</span></div>'+
     '<div class="c-gp"><span class="gbadge gbtn" data-group="'+m.group+'">GROUP '+m.group+'</span></div>'+
     '<div class="c-meta">'+(fav?'<span class="star">★ following</span>':'')+'<span>📍 '+esc(m.venue)+'</span></div></div>';
 }
-function recompute(now){renderNextShell(now);renderLiveBanner(now);renderList(now);updateCountdown(now);}
+function topScorers(limit){
+  const map={};
+  Object.keys(goalsByMatch).forEach(k=>{(goalsByMatch[k]||[]).forEach(g=>{
+    const key=g.n+'|'+(g.t||'');
+    if(!map[key])map[key]={n:g.n,t:g.t,g:0,p:0};
+    map[key].g++;if(g.pen)map[key].p++;
+  });});
+  return Object.values(map).sort((a,b)=>b.g-a.g||(a.n||'').localeCompare(b.n||'')).slice(0,limit||12);
+}
+function renderTopScorers(){
+  const el=document.getElementById('topScorers');if(!el)return;
+  const list=topScorers(12);
+  if(!list.length){el.innerHTML='';return;}
+  const top=list[0].g;
+  el.innerHTML='<div class="tscard"><div class="tshead">⚽ Top Scorers <span class="tssub">Golden Boot · live</span></div><div class="tslist">'+
+    list.map((s,i)=>'<span class="tspill'+(s.g===top?' lead':'')+'">'+
+      '<b class="tsr">'+(i+1)+'</b>'+(s.t?flag(s.t):'')+'<span class="tsn">'+esc(s.n)+'</span><b class="tsg">'+s.g+'</b></span>').join('')+
+    '</div></div>';
+}
+function recompute(now){renderNextShell(now);renderLiveBanner(now);renderTopScorers();renderList(now);updateCountdown(now);}
 function tick(){
   const now=Date.now();renderClock(now);
   if(stage!=='matches')return;
@@ -642,21 +695,21 @@ document.getElementById('list').addEventListener('click',e=>{
   const gEl=e.target.closest('[data-group]');
   if(gEl&&!scoreEdit){openGroup(gEl.getAttribute('data-group'));return;}
   if(!scoreEdit)return;
-  const row=e.target.closest('[data-utc]');if(!row)return;
-  const utc=row.getAttribute('data-utc');const m=GS.find(x=>x.utc===utc);if(!m)return;
-  const cur=scoreFor(utc);const def=cur?cur[0]+'-'+cur[1]:'';
+  const row=e.target.closest('[data-mk]');if(!row)return;
+  const mk=row.getAttribute('data-mk');const m=GS.find(x=>mkey(x)===mk);if(!m)return;
+  const cur=scoreFor(m);const def=cur?cur[0]+'-'+cur[1]:'';
   const v=prompt('Score — '+m.a+' vs '+m.b+'\n(e.g. 2-1, or leave blank to clear):',def);
   if(v===null)return;
   const t=(v||'').trim();
-  if(t===''){delete userResults[utc];}
-  else{const mm=t.match(/^(\d+)\s*[-:]\s*(\d+)$/);if(!mm){alert('Please use a format like 2-1');return;}userResults[utc]=[parseInt(mm[1],10),parseInt(mm[2],10)];}
+  if(t===''){delete userResults[mk];}
+  else{const mm=t.match(/^(\d+)\s*[-:]\s*(\d+)$/);if(!mm){alert('Please use a format like 2-1');return;}userResults[mk]=[parseInt(mm[1],10),parseInt(mm[2],10)];}
   saveResults();lastMin=-1;tick();
 });
 function openGroup(g){
   const teams=GROUPS[g];if(!teams)return;
   const ms=GS.filter(m=>m.group===g);
   const st={};teams.forEach(t=>st[t]={P:0,W:0,D:0,L:0,GF:0,GA:0,Pts:0});
-  ms.forEach(m=>{const sc=scoreFor(m.utc);if(!sc)return;const a=st[m.a],b=st[m.b];if(!a||!b)return;
+  ms.forEach(m=>{const sc=scoreFor(m);if(!sc)return;const a=st[m.a],b=st[m.b];if(!a||!b)return;
     a.P++;b.P++;a.GF+=sc[0];a.GA+=sc[1];b.GF+=sc[1];b.GA+=sc[0];
     if(sc[0]>sc[1]){a.W++;b.L++;a.Pts+=3;}
     else if(sc[1]>sc[0]){b.W++;a.L++;b.Pts+=3;}
@@ -669,7 +722,7 @@ function openGroup(g){
     html+='<tr class="'+me.trim()+'"><td class="l">'+flag(t)+esc(t)+'</td><td>'+s.P+'</td><td>'+s.W+'</td><td>'+s.D+'</td><td>'+s.L+'</td><td>'+s.GF+'</td><td>'+s.GA+'</td><td>'+(gd>0?'+':'')+gd+'</td><td class="pts">'+s.Pts+'</td></tr>';});
   html+='</tbody></table><div class="gfx"><h3>Fixtures</h3>';
   ms.slice().sort((a,b)=>new Date(a.utc)-new Date(b.utc)).forEach(m=>{
-    const sc=scoreFor(m.utc);
+    const sc=scoreFor(m);
     const mid=sc?'<span class="sc">'+sc[0]+'–'+sc[1]+'</span>':'<span class="vs">vs</span>';
     html+='<div class="gfxrow"><span class="gd">'+dayLabel(m.utc)+' · '+timeLabel(m.utc)+'</span>'+
       '<span class="ga">'+flag(m.a)+'<span class="nm">'+esc(m.a)+'</span></span>'+mid+
@@ -702,6 +755,7 @@ document.getElementById('tabs').querySelectorAll('.tab').forEach(t=>t.onclick=()
   goMatches();
   setInterval(tick,1000);tick();
   try{const v=localStorage.getItem('wcLive');if(v){const o=JSON.parse(v);liveResults=o.r||{};liveState=o.s||{};liveStamp=o.t||0;}}catch(e){}
+  try{const vg=localStorage.getItem('wcGoals');if(vg)goalsByMatch=JSON.parse(vg)||{};}catch(e){}
   fetchLive(true);
   setInterval(()=>fetchLive(false),60000);
   setInterval(()=>fetchLive(true),600000);

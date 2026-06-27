@@ -151,23 +151,23 @@ body{font-family:'Inter',system-ui,sans-serif;color:var(--tx);
 .star{color:var(--gold);font-size:11px}
 /* ---- top scorers ---- */
 #topScorers:empty{display:none}
-.tscard{margin-top:10px;background:var(--card);border:1px solid var(--line);border-radius:13px;padding:11px 14px}
-.tshead{font-family:'Barlow Condensed';font-weight:700;letter-spacing:.04em;font-size:16px;margin-bottom:9px;display:flex;align-items:baseline;gap:10px}
-.tssub{font-family:'JetBrains Mono';font-weight:500;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut2)}
-.tslist{display:flex;flex-wrap:wrap;gap:8px}
-.tspill{display:inline-flex;align-items:center;gap:7px;background:var(--card2);border:1px solid var(--line);border-radius:999px;padding:4px 10px 4px 6px;font-family:'Barlow Condensed';font-weight:600;font-size:16px}
+.tscard{margin-top:10px;background:var(--card);border:1px solid var(--line);border-radius:13px;padding:9px 13px}
+.tshead{font-family:'Barlow Condensed';font-weight:700;letter-spacing:.04em;font-size:15px;margin-bottom:7px;display:flex;align-items:baseline;gap:9px}
+.tssub{font-family:'JetBrains Mono';font-weight:500;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut2)}
+.tslist{display:flex;flex-wrap:wrap;gap:6px}
+.tspill{display:inline-flex;align-items:center;gap:6px;background:var(--card2);border:1px solid var(--line);border-radius:999px;padding:3px 9px 3px 5px;font-family:'Barlow Condensed';font-weight:600;font-size:13.5px}
 .tspill.lead{border-color:var(--goldD);background:var(--greenDim)}
-.tspill .tsr{font-family:'JetBrains Mono';font-size:10px;color:var(--mut2);font-weight:700;min-width:13px;text-align:center}
-.tspill .fl{width:24px;height:17px;border-radius:2px}
-.tspill .flx{min-width:24px;height:17px;font-size:9px}
+.tspill .tsr{font-family:'JetBrains Mono';font-size:9px;color:var(--mut2);font-weight:700;min-width:12px;text-align:center}
+.tspill .fl{width:19px;height:13px;border-radius:2px}
+.tspill .flx{min-width:19px;height:13px;font-size:8px}
 .tspill .tsn{white-space:nowrap}
-.tspill .tsg{font-family:'JetBrains Mono';font-weight:700;color:var(--gold);font-size:14px;margin-left:2px}
+.tspill .tsg{font-family:'JetBrains Mono';font-weight:700;color:var(--gold);font-size:12px;margin-left:1px}
 /* ---- aligned day-box grid (single / all views) ---- */
 .daybox{background:var(--card);border:1px solid var(--line);border-radius:13px;overflow:hidden;margin-bottom:6px}
 .daybox.ydaybox{background:var(--ydaybg);border-color:var(--ydayborder);box-shadow:inset 6px 0 0 var(--ydayaccent)}
 .daybox.ydaybox .grow+.grow{border-top-color:var(--ydayborder)}
 .daybox.todaybox{border:2px solid var(--gold)}
-.daybox .grow{display:grid;grid-template-columns:92px 190px 72px 190px auto auto;align-items:center;gap:12px;padding:9px 16px}
+.daybox .grow{display:grid;grid-template-columns:92px 182px 66px 182px 76px 170px;align-items:center;gap:12px;padding:9px 16px}
 .daybox .grow+.grow{border-top:1px solid var(--line)}
 .daybox .grow.live{background:linear-gradient(90deg,var(--greenDim),transparent 60%)}
 .daybox .grow.done{opacity:.5}
@@ -186,6 +186,8 @@ body{font-family:'Inter',system-ui,sans-serif;color:var(--tx);
 .c-vs .v{color:var(--mut2);font-size:20px;font-family:'Barlow Condensed';font-weight:600}
 .c-gp{display:flex;align-items:center}
 .c-meta{color:var(--mut2);font-size:12.5px;display:flex;flex-direction:column;align-items:flex-start;gap:2px;line-height:1.25}
+.c-meta>span,.c-meta .star{display:flex;align-items:center;gap:5px;white-space:nowrap;text-align:left;justify-content:flex-start}
+.c-meta .ic{width:15px;flex:none;display:inline-flex;justify-content:center}
 .flagbtn{cursor:pointer;display:inline-flex;border-radius:3px}
 .flagbtn:hover{outline:2px solid var(--goldD);outline-offset:1px}
 .gbtn{cursor:pointer}
@@ -253,7 +255,7 @@ body{font-family:'Inter',system-ui,sans-serif;color:var(--tx);
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(52,211,153,.5)}70%{box-shadow:0 0 0 7px rgba(52,211,153,0)}100%{box-shadow:0 0 0 0 rgba(52,211,153,0)}}
 /* Windows / desktop wallpaper: keep all data in the right two-thirds, left third clear for icons */
 @media(min-width:1000px){
-  #matches{width:75%;max-width:none;margin-left:25%;margin-right:0;padding:14px 2.2vw 44px}
+  #matches{width:80%;max-width:none;margin-left:20%;margin-right:0;padding:14px 2.2vw 44px}
   #matches .single{max-width:900px;margin:6px 0 0}
 }
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -611,7 +613,7 @@ function rowGridHTML(m,now,hl){
   if(m.ko){
     return '<div class="grow'+(st==='live'?' live':'')+'">'+tm+
       '<div class="c-span" style="grid-column:2 / 6"><span class="koTag">'+m.round+'</span><span class="v"> · teams TBD</span></div>'+
-      '<div class="c-meta"><span>📍 '+esc(m.venue)+'</span></div></div>';
+      '<div class="c-meta"><span><i class="ic">📍</i>'+esc(m.venue)+'</span></div></div>';
   }
   const fav=hl&&(followed.has(m.a)||followed.has(m.b));
   const sc=scoreFor(m);const editable=scoreEdit;
@@ -623,7 +625,7 @@ function rowGridHTML(m,now,hl){
     '<div class="c-vs">'+mid+'</div>'+
     '<div class="c-tb'+tb+'"><span class="flagbtn" data-group="'+m.group+'">'+flag(m.b)+'</span><span class="nm">'+esc(m.b)+'</span></div>'+
     '<div class="c-gp"><span class="gbadge gbtn" data-group="'+m.group+'">GROUP '+m.group+'</span></div>'+
-    '<div class="c-meta">'+(fav?'<span class="star">★ following</span>':'')+'<span>📍 '+esc(m.venue)+'</span></div></div>';
+    '<div class="c-meta">'+(fav?'<span class="star"><i class="ic">★</i>following</span>':'')+'<span><i class="ic">📍</i>'+esc(m.venue)+'</span></div></div>';
 }
 function topScorers(limit){
   const map={};
@@ -636,7 +638,7 @@ function topScorers(limit){
 }
 function renderTopScorers(){
   const el=document.getElementById('topScorers');if(!el)return;
-  const list=topScorers(12);
+  const list=topScorers(10);
   if(!list.length){el.innerHTML='';return;}
   const top=list[0].g;
   el.innerHTML='<div class="tscard"><div class="tshead">⚽ Top Scorers <span class="tssub">Golden Boot · live</span></div><div class="tslist">'+

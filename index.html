@@ -149,6 +149,7 @@ body{font-family:'Inter',system-ui,sans-serif;color:var(--tx);
 .meta{color:var(--mut2);font-size:12.5px;margin-top:0;margin-left:auto;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .gbadge{font-family:'JetBrains Mono';font-size:10px;font-weight:700;color:var(--mut);border:1px solid var(--line);border-radius:6px;padding:2px 6px}
 .star{color:var(--gold);font-size:11px}
+.gbadge.koround{color:var(--gold);border-color:var(--goldD);font-size:10px}
 /* ---- top scorers ---- */
 #topScorers:empty{display:none}
 .tscard{margin-top:10px;background:var(--card);border:1px solid var(--line);border-radius:13px;padding:9px 13px}
@@ -297,21 +298,13 @@ body{font-family:'Inter',system-ui,sans-serif;color:var(--tx);
 </div>
   </div>
 
-  <div class="follownav">
-    <span class="lab">Following</span>
-    <span class="flags" id="followFlags"></span>
-    <button class="editbtn" id="scoreBtn">✎ Scores</button>
-    <button class="editbtn" id="editBtn">✎ Edit teams</button>
-  </div>
-  <div id="scoreHint" class="scorehint hidden">Tap any group match to type its score (e.g. 2-1). Tap “Done” when finished — saved on this device.</div>
 
   <div id="liveBanner"></div>
   <div id="nextUp"></div>
   <div id="topScorers"></div>
 
   <div class="tabs" id="tabs">
-    <button class="tab on" data-v="mine">My teams<span class="c" id="cMine">0</span></button>
-    <button class="tab" data-v="three">Recent + next<span class="c" id="cThree">0</span></button>
+    <button class="tab on" data-v="three">Recent + next<span class="c" id="cThree">0</span></button>
     <button class="tab" data-v="all">All matches<span class="c" id="cAll">0</span></button>
     <button class="tab" data-v="past">Past<span class="c" id="cPast">0</span></button>
   </div>
@@ -436,7 +429,12 @@ function loadResults(){try{const v=localStorage.getItem("wcResults");if(v)userRe
 function saveResults(){try{localStorage.setItem("wcResults",JSON.stringify(userResults));}catch(e){}}
 let liveResults={}, liveState={}, liveClock={}, liveOK=false, liveStamp=0;
 let goalsByMatch={};
-function mkey(m){return m.ko?(m.utc+'|'+(m.round||'')+'|ko'):(m.utc+'|'+m.a+'|'+m.b);}
+let koTeams={};
+const koByEpoch={};KO.forEach(k=>{const e=new Date(k.utc).getTime();(koByEpoch[e]=koByEpoch[e]||[]).push(k);});
+const koByDay={};KO.forEach(k=>{const d=dayKey(k.utc);(koByDay[d]=koByDay[d]||[]).push(k);});
+function vnorm(x){return (x||'').toLowerCase().replace(/[^a-z]/g,'');}
+function koAbbr(r){r=r||'';if(/round of 32/i.test(r))return'R32';if(/round of 16/i.test(r))return'R16';if(/quarter/i.test(r))return'QF';if(/semi/i.test(r))return'SF';if(/third/i.test(r))return'3RD';if(/final/i.test(r))return'FINAL';return r;}
+function mkey(m){return m.ko?(m.utc+'|'+m.venue+'|ko'):(m.utc+'|'+m.a+'|'+m.b);}
 function scoreFor(m){
   const k=mkey(m);
   if(Object.prototype.hasOwnProperty.call(liveResults,k))return liveResults[k];
@@ -466,28 +464,47 @@ function resolveTeam(n){if(!n)return null;const k=teamNorm(n);return ESPN_ALIAS[
 function fmtUTCDate(d){return d.getUTCFullYear()+String(d.getUTCMonth()+1).padStart(2,'0')+String(d.getUTCDate()).padStart(2,'0');}
 async function fetchLive(full){
   try{
-    let range;
-    if(full){range='20260611-20260719';}
-    else{range=fmtUTCDate(new Date(Date.now()-86400000))+'-'+fmtUTCDate(new Date(Date.now()+86400000));}
-    const url='https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?limit=400&dates='+range;
+    let url='https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?limit=400';
+    if(full)url+='&dates=20260611-20260719';
     const r=await fetch(url,{cache:'no-store'});
     if(!r.ok)throw 0;
-    const j=await r.json();let changed=false,goalsChanged=false;
+    const j=await r.json();let changed=false,goalsChanged=false,koChanged=false;const usedKO=new Set();
     (j.events||[]).forEach(ev=>{
       const comp=(ev.competitions||[])[0];if(!comp)return;
       const cs=comp.competitors||[];if(cs.length<2)return;
       const stt=((comp.status||{}).type||{});const st=stt.state;
       const n0=resolveTeam(cs[0].team&&cs[0].team.displayName),n1=resolveTeam(cs[1].team&&cs[1].team.displayName);
       if(!n0||!n1)return;
-      const m=GS.find(x=>(x.a===n0&&x.b===n1)||(x.a===n1&&x.b===n0));if(!m)return;
-      if(st==='pre')return;
-      const s0=parseInt(cs[0].score,10),s1=parseInt(cs[1].score,10);if(isNaN(s0)||isNaN(s1))return;
-      const pair=(n0===m.a)?[s0,s1]:[s1,s0];
-      const mk=mkey(m);
-      const prev=liveResults[mk];
-      if(!prev||prev[0]!==pair[0]||prev[1]!==pair[1]||liveState[mk]!==st)changed=true;
-      liveResults[mk]=pair;liveState[mk]=st;
-      liveClock[mk]=(st==='in')?(((comp.status||{}).displayClock)||"LIVE"):'';
+      const m=GS.find(x=>(x.a===n0&&x.b===n1)||(x.a===n1&&x.b===n0));
+      if(m){
+        if(st!=='pre'){
+          const s0=parseInt(cs[0].score,10),s1=parseInt(cs[1].score,10);
+          if(!isNaN(s0)&&!isNaN(s1)){
+            const pair=(n0===m.a)?[s0,s1]:[s1,s0];const mk=mkey(m);const prev=liveResults[mk];
+            if(!prev||prev[0]!==pair[0]||prev[1]!==pair[1]||liveState[mk]!==st)changed=true;
+            liveResults[mk]=pair;liveState[mk]=st;liveClock[mk]=(st==='in')?(stt.displayClock||"LIVE"):'';
+          }
+        }
+      }else{
+        let pool=(koByEpoch[new Date(ev.date).getTime()]||[]).filter(k=>!usedKO.has(k));
+        if(!pool.length)pool=(koByDay[dayKey(ev.date)]||[]).filter(k=>!usedKO.has(k));
+        let slot=null;
+        if(pool.length){
+          const city=vnorm(comp.venue&&((comp.venue.address&&comp.venue.address.city)||comp.venue.fullName)||'');
+          for(const k of pool){const kv=vnorm(k.venue);if(city&&kv&&(city.indexOf(kv)>=0||kv.indexOf(city)>=0)){slot=k;break;}}
+          if(!slot)slot=pool[0];
+        }
+        if(slot){
+          usedKO.add(slot);const kk=mkey(slot);
+          const pt=koTeams[kk];if(!pt||pt.a!==n0||pt.b!==n1){koTeams[kk]={a:n0,b:n1};koChanged=true;}
+          if(st!=='pre'){
+            const s0=parseInt(cs[0].score,10),s1=parseInt(cs[1].score,10);
+            if(!isNaN(s0)&&!isNaN(s1)){const pair=[s0,s1];const prev=liveResults[kk];
+              if(!prev||prev[0]!==pair[0]||prev[1]!==pair[1]||liveState[kk]!==st)changed=true;
+              liveResults[kk]=pair;liveState[kk]=st;liveClock[kk]=(st==='in')?(stt.displayClock||"LIVE"):'';}
+          }else{liveState[kk]=st;}
+        }
+      }
       const det=comp.details||[];
       if(det.length){
         const goals=[];
@@ -506,7 +523,8 @@ async function fetchLive(full){
     liveOK=true;liveStamp=Date.now();
     try{localStorage.setItem('wcLive',JSON.stringify({r:liveResults,s:liveState,t:liveStamp}));}catch(e){}
     if(goalsChanged){try{localStorage.setItem('wcGoals',JSON.stringify(goalsByMatch));}catch(e){}}
-    if(changed||goalsChanged)lastMin=-1;
+    if(koChanged){try{localStorage.setItem('wcKO',JSON.stringify(koTeams));}catch(e){}}
+    if(changed||goalsChanged||koChanged)lastMin=-1;
     renderLiveStat();
   }catch(e){liveOK=false;renderLiveStat();}
 }
@@ -544,11 +562,12 @@ function teamsHTML(m,hl){
 }
 function rowHTML(m,now,hl){
   const st=statusOf(m,now);const fav=!m.ko&&hl&&(followed.has(m.a)||followed.has(m.b));
-  const hasSc=!m.ko&&scoreFor(m);const editable=scoreEdit&&!m.ko;
+  const kt=m.ko?koTeams[mkey(m)]:null;
+  const hasSc=scoreFor(m);const editable=scoreEdit&&!m.ko;
   const cls='row '+(st==='live'?'live ':(st==='done'&&!hasSc)?'done ':'')+(fav?'fav ':'')+(editable?'editable':'');
   const stTag=st==='live'?'<small class="lv">● '+(liveClock[mkey(m)]||'LIVE')+'</small>':(st==='done'||hasSc)?'<small class="ft">FULL TIME</small>':'<small class="up">KICKOFF</small>';
-  const fix=m.ko?'<span class="tline"><span class="koTag">'+m.round+'</span><span class="v" style="margin-left:6px">· teams TBD</span></span>':teamsHTML(m,hl);
-  const meta='<div class="meta">'+(fav?'<span class="star">★ following</span>':'')+'<span>📍 '+esc(m.venue)+'</span>'+(!m.ko?'<span class="gbadge gbtn" data-group="'+m.group+'">GROUP '+m.group+'</span>':'')+'</div>';
+  const fix=m.ko?(kt?teamsHTML(Object.assign({},m,{a:kt.a,b:kt.b}),hl):'<span class="tline"><span class="koTag">'+m.round+'</span><span class="v" style="margin-left:6px">· teams TBD</span></span>'):teamsHTML(m,hl);
+  const meta='<div class="meta">'+(fav?'<span class="star">★ following</span>':'')+'<span>📍 '+esc(m.venue)+'</span>'+(!m.ko?'<span class="gbadge gbtn" data-group="'+m.group+'">GROUP '+m.group+'</span>':(kt?'<span class="gbadge koround">'+koAbbr(m.round)+'</span>':''))+'</div>';
   return '<div class="'+cls.trim()+'"'+(editable?' data-mk="'+mkey(m)+'"':'')+'><div class="tm">'+timeLabel(m.utc)+stTag+'</div><div class="fix">'+fix+meta+'</div></div>';
 }
 function dayGroups(list){
@@ -559,7 +578,6 @@ function renderFollowNav(){
   document.getElementById('followFlags').innerHTML=followed.size?[...followed].map(t=>'<span class="flagbtn" data-group="'+TEAM_GROUP[t]+'" title="'+esc(t)+' — group '+TEAM_GROUP[t]+'">'+flag(t)+'</span>').join(''):'<span style="color:var(--mut2);font-size:13px">no teams — showing all matches</span>';
 }
 function updateCounts(){
-  document.getElementById('cMine').textContent=GS.filter(m=>followed.has(m.a)||followed.has(m.b)).length;
   document.getElementById('cThree').textContent=threeDayList(Date.now()).length;
   document.getElementById('cAll').textContent=ALL.length;
   const tk=dayKey(Date.now());document.getElementById('cPast').textContent=ALL.filter(m=>dayKey(m.utc)<tk).length;
@@ -569,13 +587,17 @@ function renderLiveBanner(now){const n=ALL.filter(m=>statusOf(m,now)==='live').l
 
 function renderNextShell(now){
   const el=document.getElementById('nextUp');
-  const mine=GS.filter(m=>followed.has(m.a)||followed.has(m.b)).filter(m=>new Date(m.utc).getTime()+MATCH_MS>now).sort((a,b)=>new Date(a.utc)-new Date(b.utc));
-  curNext=mine[0]||null;
+  let up=GS.filter(m=>new Date(m.utc).getTime()+MATCH_MS>now);
+  KO.forEach(k=>{const kt=koTeams[mkey(k)];if(kt&&new Date(k.utc).getTime()+MATCH_MS>now)up.push(Object.assign({},k,{a:kt.a,b:kt.b}));});
+  up.sort((a,b)=>new Date(a.utc)-new Date(b.utc));
+  curNext=up[0]||null;
   if(!curNext){el.innerHTML='';return;}
   const m=curNext,live=statusOf(m,now)==='live';
-  el.innerHTML='<div class="next nextclick" data-group="'+m.group+'" title="Open Group '+m.group+'"><div class="next-in">'+
-    '<div class="next-top"><span class="next-lab">⏱ '+(live?'Your team is playing':'Next up')+'</span>'+
-    '<span class="next-meta"><span>🕒 '+timeLabel(m.utc)+' · '+dayLabel(m.utc)+'</span><span>📍 '+esc(m.venue)+'</span><span>Group '+m.group+'</span></span></div>'+
+  const tag=m.ko?koAbbr(m.round):('Group '+m.group);
+  const grpAttr=m.ko?'':(' data-group="'+m.group+'" title="Open Group '+m.group+'"');
+  el.innerHTML='<div class="'+(m.ko?'next':'next nextclick')+'"'+grpAttr+'><div class="next-in">'+
+    '<div class="next-top"><span class="next-lab">⏱ '+(live?'Live now':'Next up')+'</span>'+
+    '<span class="next-meta"><span>🕒 '+timeLabel(m.utc)+' · '+dayLabel(m.utc)+'</span><span>📍 '+esc(m.venue)+'</span><span>'+tag+'</span></span></div>'+
     '<div class="next-row"><div class="next-teams"><span>'+esc(m.a)+' '+flag(m.a)+'</span><span class="v">vs</span><span>'+flag(m.b)+' '+esc(m.b)+'</span></div><div class="cd" id="cdBox"></div></div>'+
     '</div></div>';
 }
@@ -612,6 +634,18 @@ function rowGridHTML(m,now,hl){
   const stTag=st==='live'?'<small class="lv">● '+(liveClock[mkey(m)]||'LIVE')+'</small>':((st==='done'||(!m.ko&&scoreFor(m)))?'<small class="ft">FULL TIME</small>':'<small class="up">KICKOFF</small>');
   const tm='<div class="c-tm">'+timeLabel(m.utc)+stTag+'</div>';
   if(m.ko){
+    const kt=koTeams[mkey(m)];
+    if(kt){
+      const sc=scoreFor(m);
+      const mid=sc?'<span class="score'+(sc[0]>sc[1]?' wA':sc[1]>sc[0]?' wB':'')+'">'+sc[0]+'<i>–</i>'+sc[1]+'</span>':'<span class="v">vs</span>';
+      const kcls=('grow '+(st==='live'?'live ':(st==='done'&&!sc?'done ':''))).trim();
+      return '<div class="'+kcls+'">'+tm+
+        '<div class="c-ta"><span class="nm">'+esc(kt.a)+'</span>'+flag(kt.a)+'</div>'+
+        '<div class="c-vs">'+mid+'</div>'+
+        '<div class="c-tb">'+flag(kt.b)+'<span class="nm">'+esc(kt.b)+'</span></div>'+
+        '<div class="c-gp"><span class="gbadge koround">'+koAbbr(m.round)+'</span></div>'+
+        '<div class="c-meta"><span><i class="ic">📍</i>'+esc(m.venue)+'</span></div></div>';
+    }
     return '<div class="grow'+(st==='live'?' live':'')+'">'+tm+
       '<div class="c-span" style="grid-column:2 / 6"><span class="koTag">'+m.round+'</span><span class="v"> · teams TBD</span></div>'+
       '<div class="c-meta"><span><i class="ic">📍</i>'+esc(m.venue)+'</span></div></div>';
@@ -657,12 +691,12 @@ function tick(){
 }
 
 function goMatches(defView){
-  stage='matches';view=defView||(followed.size?'mine':'all');lastMin=-1;
+  stage='matches';view=defView||'three';lastMin=-1;
   document.getElementById('setup').classList.add('hidden');
   document.getElementById('bar').classList.add('hidden');
   document.getElementById('matches').classList.remove('hidden');
   document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x.getAttribute('data-v')===view));
-  renderFollowNav();updateCounts();tick();window.scrollTo(0,0);
+  updateCounts();tick();window.scrollTo(0,0);
 }
 function goSetup(){
   stage='setup';
@@ -687,13 +721,6 @@ function startAutoScroll(){
 
 document.getElementById('confirm').onclick=()=>{if(followed.size)goMatches('mine');};
 document.getElementById('seeAll').onclick=()=>goMatches('all');
-document.getElementById('editBtn').onclick=goSetup;
-document.getElementById('scoreBtn').onclick=()=>{
-  scoreEdit=!scoreEdit;
-  document.getElementById('scoreBtn').textContent=scoreEdit?'✓ Done':'✎ Scores';
-  document.getElementById('scoreHint').classList.toggle('hidden',!scoreEdit);
-  lastMin=-1;tick();
-};
 document.getElementById('list').addEventListener('click',e=>{
   const gEl=e.target.closest('[data-group]');
   if(gEl&&!scoreEdit){openGroup(gEl.getAttribute('data-group'));return;}
@@ -736,7 +763,6 @@ function openGroup(g){
   document.getElementById('gModal').classList.remove('hidden');
 }
 function closeGroup(){document.getElementById('gModal').classList.add('hidden');}
-document.getElementById('followFlags').addEventListener('click',e=>{const g=e.target.closest('[data-group]');if(g)openGroup(g.getAttribute('data-group'));});
 document.getElementById('nextUp').addEventListener('click',e=>{const g=e.target.closest('[data-group]');if(g)openGroup(g.getAttribute('data-group'));});
 document.getElementById('gClose').onclick=closeGroup;
 document.getElementById('gModal').addEventListener('click',e=>{if(e.target.id==='gModal')closeGroup();});
@@ -751,14 +777,14 @@ document.getElementById('tabs').querySelectorAll('.tab').forEach(t=>t.onclick=()
   try{const t=localStorage.getItem("wcTheme");if(t==="light"||t==="dark")theme=t;}catch(e){}
   applyTheme();
   loadResults();
-  const hashTeams=parseHash();
-  if(hashTeams.length){followed=new Set(hashTeams);storeSet();}
-  else{const saved=storeGet();if(saved)followed=new Set(saved);}
+  followed=new Set();
   buildPicker();
   goMatches();
   setInterval(tick,1000);tick();
   try{const v=localStorage.getItem('wcLive');if(v){const o=JSON.parse(v);liveResults=o.r||{};liveState=o.s||{};liveStamp=o.t||0;}}catch(e){}
   try{const vg=localStorage.getItem('wcGoals');if(vg)goalsByMatch=JSON.parse(vg)||{};}catch(e){}
+  try{const vk=localStorage.getItem('wcKO');if(vk)koTeams=JSON.parse(vk)||{};}catch(e){}
+  fetchLive(false);
   fetchLive(true);
   setInterval(()=>fetchLive(false),60000);
   setInterval(()=>fetchLive(true),600000);

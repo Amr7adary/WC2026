@@ -118,7 +118,24 @@ body{font-family:'Inter',system-ui,sans-serif;color:var(--tx);
 .tab .c{font-family:'JetBrains Mono';font-size:11px;opacity:.75;margin-left:6px}
 
 .single{max-width:900px;margin:6px auto 0}
-.board{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:14px;align-items:start;margin-top:8px}
+.board{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:14px;align-items:start;margin-top:8px}
+/* ---- knockout bracket ---- */
+.bracket{display:flex;gap:16px;overflow-x:auto;padding:10px 2px 22px;align-items:stretch;margin-top:8px}
+.bcol{flex:none;width:184px;display:flex;flex-direction:column}
+.bch{font-family:'JetBrains Mono';font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--gold);text-transform:uppercase;margin-bottom:10px;text-align:center}
+.bcol-in{flex:1;display:flex;flex-direction:column;justify-content:space-around;gap:8px;min-height:560px}
+.bmatch{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:6px 9px}
+.bmatch.live{border-color:var(--greenText);background:var(--greenDim)}
+.bmatch.done{opacity:.66}
+.brow{display:flex;align-items:center;justify-content:space-between;gap:6px;font-family:'Barlow Condensed';font-weight:600;font-size:15px;line-height:1.35}
+.brow.win{color:var(--gold)}
+.brow .bt{display:flex;align-items:center;gap:6px;min-width:0}
+.brow .bfl .fl{width:20px;height:14px;border-radius:2px}
+.brow .bn{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:108px}
+.brow b{font-family:'JetBrains Mono';font-size:13px;font-weight:700}
+.bt.tbd .bn{color:var(--mut2)}
+.bv{font-family:'JetBrains Mono';font-size:8px;color:var(--mut2);margin-top:5px;text-align:center;letter-spacing:.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.b3rd{font-family:'JetBrains Mono';font-size:9px;color:var(--mut2);text-align:center;margin:18px 0 4px;text-transform:uppercase;letter-spacing:.12em}
 .daycard{background:rgba(255,255,255,.02);border:1px solid var(--line);border-radius:14px;padding:13px}
 .dch{font-family:'Barlow Condensed';font-weight:700;font-size:18px;letter-spacing:.03em;margin-bottom:11px;display:flex;align-items:center;gap:9px}
 .datehd{display:flex;align-items:center;gap:10px;margin:22px 0 10px}
@@ -126,22 +143,28 @@ body{font-family:'Inter',system-ui,sans-serif;color:var(--tx);
 .datehd .ln{flex:1;height:1px;background:var(--line)}
 .today{font-size:10px;font-weight:700;letter-spacing:.12em;color:#0A1620;background:var(--green);padding:2px 7px;border-radius:999px;text-transform:uppercase}
 .yday{font-size:10px;font-weight:700;letter-spacing:.12em;color:var(--mut);background:transparent;border:1px solid var(--line2);padding:2px 7px;border-radius:999px;text-transform:uppercase}
-.row{display:flex;align-items:center;gap:15px;background:var(--card);border:1px solid var(--line);border-radius:13px;padding:13px 16px;margin-bottom:8px;transition:border-color .15s}
+.row{display:flex;align-items:stretch;gap:14px;background:var(--card);border:1px solid var(--line);border-radius:13px;padding:12px 14px;margin-bottom:8px;min-height:116px;transition:border-color .15s}
 .row.live{border-color:rgba(52,211,153,.45);background:linear-gradient(90deg,var(--greenDim),var(--card) 55%)}
 .row.done{opacity:.5}
 .row.fav{border-color:var(--goldD)}
 .row.editable{cursor:pointer;border-style:dashed}
 .row.editable:hover{border-color:var(--gold)}
 .scorehint{margin-top:12px;background:var(--greenDim);border:1px solid var(--line2);border-radius:11px;padding:10px 14px;font-size:13px;color:var(--tx)}
-.tm{font-family:'JetBrains Mono';font-weight:700;font-size:15px;width:78px;flex:none;line-height:1.2}
-.tm small{display:block;font-size:9px;font-weight:500;letter-spacing:.1em;margin-top:3px}
+.tm{font-family:'JetBrains Mono';width:96px;flex:none;display:flex;flex-direction:column;gap:2px;line-height:1.2}
+.tm .t-time{font-weight:700;font-size:15px}
+.tm .t-st{font-size:9px;font-weight:600;letter-spacing:.1em;margin-bottom:5px}
 .tm .up{color:var(--mut2)}.tm .lv{color:var(--greenText)}.tm .ft{color:var(--mut2)}
-.fix{flex:1;min-width:0;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-.tline{font-family:'Barlow Condensed';font-weight:600;font-size:23px;display:flex;align-items:center;gap:9px;flex-wrap:wrap;line-height:1.1}
-.tline .v{color:var(--mut2);font-size:15px}
+.tm .t-loc{font-family:'Inter';font-size:11px;color:var(--mut2);display:flex;align-items:center;gap:4px}
+.tm .t-rd{margin-top:3px}
+.rdbadge{font-family:'JetBrains Mono';font-size:9px;font-weight:700;letter-spacing:.04em;border:1px solid var(--line2);color:var(--mut);border-radius:5px;padding:2px 6px;display:inline-block}
+.rdbadge.ko{color:var(--gold);border-color:var(--goldD)}
+.fix{flex:1;min-width:0;display:flex;align-items:center}
+.tline{font-family:'Barlow Condensed';font-weight:600;font-size:21px;display:flex;flex-direction:column;align-items:flex-start;gap:3px;line-height:1.05}
+.tline .v{color:var(--mut2);font-size:14px;margin:1px 0}
 .tline .t{display:inline-flex;align-items:center;gap:8px}
-.tline .fl{width:32px;height:23px}
+.tline .fl{width:30px;height:21px}
 .tline .t.favt{color:var(--gold)}
+.tline.tbd{flex-direction:row;align-items:center;gap:8px}
 .score{font-family:'JetBrains Mono';font-weight:700;font-size:20px;color:var(--tx);background:var(--card2);
   border:1px solid var(--line);border-radius:8px;padding:2px 10px;letter-spacing:.02em;display:inline-flex;align-items:center;white-space:nowrap;line-height:1.1}
 .score i{font-style:normal;color:var(--mut2);margin:0 6px}
@@ -306,6 +329,7 @@ body{font-family:'Inter',system-ui,sans-serif;color:var(--tx);
   <div class="tabs" id="tabs">
     <button class="tab on" data-v="three">Recent + next<span class="c" id="cThree">0</span></button>
     <button class="tab" data-v="all">All matches<span class="c" id="cAll">0</span></button>
+    <button class="tab" data-v="ko">Knockout<span class="c" id="cKO">0</span></button>
     <button class="tab" data-v="past">Past<span class="c" id="cPast">0</span></button>
   </div>
   <div id="list"></div>
@@ -561,14 +585,17 @@ function teamsHTML(m,hl){
   return '<span class="tline"><span class="t'+ta+'">'+flag(m.a)+esc(m.a)+'</span>'+mid+'<span class="t'+tb+'">'+flag(m.b)+esc(m.b)+'</span></span>';
 }
 function rowHTML(m,now,hl){
-  const st=statusOf(m,now);const fav=!m.ko&&hl&&(followed.has(m.a)||followed.has(m.b));
+  const st=statusOf(m,now);
   const kt=m.ko?koTeams[mkey(m)]:null;
-  const hasSc=scoreFor(m);const editable=scoreEdit&&!m.ko;
-  const cls='row '+(st==='live'?'live ':(st==='done'&&!hasSc)?'done ':'')+(fav?'fav ':'')+(editable?'editable':'');
-  const stTag=st==='live'?'<small class="lv">● '+(liveClock[mkey(m)]||'LIVE')+'</small>':(st==='done'||hasSc)?'<small class="ft">FULL TIME</small>':'<small class="up">KICKOFF</small>';
-  const fix=m.ko?(kt?teamsHTML(Object.assign({},m,{a:kt.a,b:kt.b}),hl):'<span class="tline"><span class="koTag">'+m.round+'</span><span class="v" style="margin-left:6px">· teams TBD</span></span>'):teamsHTML(m,hl);
-  const meta='<div class="meta">'+(fav?'<span class="star">★ following</span>':'')+'<span>📍 '+esc(m.venue)+'</span>'+(!m.ko?'<span class="gbadge gbtn" data-group="'+m.group+'">GROUP '+m.group+'</span>':(kt?'<span class="gbadge koround">'+koAbbr(m.round)+'</span>':''))+'</div>';
-  return '<div class="'+cls.trim()+'"'+(editable?' data-mk="'+mkey(m)+'"':'')+'><div class="tm">'+timeLabel(m.utc)+stTag+'</div><div class="fix">'+fix+meta+'</div></div>';
+  const hasSc=scoreFor(m);
+  const cls='row '+(st==='live'?'live ':(st==='done'&&!hasSc)?'done ':'');
+  const stTag=st==='live'?'<span class="t-st lv">● '+(liveClock[mkey(m)]||'LIVE')+'</span>':(st==='done'||hasSc)?'<span class="t-st ft">FULL TIME</span>':'<span class="t-st up">KICKOFF</span>';
+  const rd=m.ko?'<span class="rdbadge ko">'+koAbbr(m.round)+'</span>':'<span class="rdbadge gbtn" data-group="'+m.group+'">GROUP '+m.group+'</span>';
+  const teams=m.ko?(kt?teamsHTML(Object.assign({},m,{a:kt.a,b:kt.b}),hl):'<span class="tline tbd"><span class="koTag">'+m.round+'</span><span class="v">teams TBD</span></span>'):teamsHTML(m,hl);
+  return '<div class="'+cls.trim()+'">'+
+    '<div class="tm"><span class="t-time">'+timeLabel(m.utc)+'</span>'+stTag+
+    '<span class="t-loc">📍 '+esc(m.venue)+'</span><span class="t-rd">'+rd+'</span></div>'+
+    '<div class="fix">'+teams+'</div></div>';
 }
 function dayGroups(list){
   const map=new Map();list.forEach(m=>{const k=dayKey(m.utc);if(!map.has(k))map.set(k,[]);map.get(k).push(m);});
@@ -581,6 +608,7 @@ function updateCounts(){
   document.getElementById('cThree').textContent=threeDayList(Date.now()).length;
   document.getElementById('cAll').textContent=ALL.length;
   const tk=dayKey(Date.now());document.getElementById('cPast').textContent=ALL.filter(m=>dayKey(m.utc)<tk).length;
+  document.getElementById('cKO').textContent=KO.length;
 }
 function renderClock(now){document.getElementById('clock').textContent=new Date(now).toLocaleTimeString("en-US",{timeZone:TZ,hour:"numeric",minute:"2-digit",second:"2-digit",hour12:true});}
 function renderLiveBanner(now){const n=ALL.filter(m=>statusOf(m,now)==='live').length;document.getElementById('liveBanner').innerHTML=n?'<div class="live-banner"><span class="pill">● LIVE</span>'+n+' match'+(n>1?'es':'')+' being played right now.</div>':'';}
@@ -614,9 +642,11 @@ function renderList(now){
   if(view==='mine'){list=GS.filter(m=>followed.has(m.a)||followed.has(m.b));empty='<div class="empty"><b>No teams followed</b>Tap “Edit teams” to choose some — their group games show here in Saudi time.</div>';}
   else if(view==='three'){list=threeDayList(now);empty='<div class="none">No matches around now.</div>';}
   else if(view==='past'){const tk=dayKey(now);list=ALL.filter(m=>dayKey(m.utc)<tk);empty='<div class="none">No past matches yet.</div>';}
+  else if(view==='ko'){list=KO.slice();empty='<div class="none">No knockout matches.</div>';}
   else{list=ALL;hl=followed.size>0;}
-  if(view!=='three'&&view!=='past'){const cutoff=dayKey(now-86400000);list=list.filter(m=>dayKey(m.utc)>=cutoff);}
+  if(view!=='three'&&view!=='past'&&view!=='ko'){const cutoff=dayKey(now-86400000);list=list.filter(m=>dayKey(m.utc)>=cutoff);}
   if(!list.length){el.innerHTML=empty||'<div class="none">No matches from yesterday onward.</div>';return;}
+  if(view==='ko'){el.innerHTML=bracketHTML(now);return;}
   const groups=dayGroups(list);if(view==='past')groups.reverse();const todayK=dayKey(now);const ydayK=dayKey(now-86400000);
   const badge=k=>k===todayK?'<span class="today">Today</span>':k===ydayK?'<span class="yday">Yesterday</span>':'';
   if(view==='three'){
@@ -670,6 +700,29 @@ function topScorers(limit){
     map[key].g++;if(g.pen)map[key].p++;
   });});
   return Object.values(map).sort((a,b)=>b.g-a.g||(a.n||'').localeCompare(b.n||'')).slice(0,limit||12);
+}
+function bmatchHTML(m,now){
+  const kt=koTeams[mkey(m)];const st=statusOf(m,now);const sc=scoreFor(m);
+  const a=kt?kt.a:null,b=kt?kt.b:null;
+  const line=(name,g)=> name
+    ?'<span class="bt"><span class="bfl">'+flag(name)+'</span><span class="bn">'+esc(name)+'</span></span>'+(g!==''?'<b>'+g+'</b>':'')
+    :'<span class="bt tbd"><span class="bn">TBD</span></span>';
+  const ga=sc?sc[0]:'',gb=sc?sc[1]:'';
+  return '<div class="bmatch'+(st==='live'?' live':(st==='done'?' done':''))+'">'+
+    '<div class="brow'+(sc&&sc[0]>sc[1]?' win':'')+'">'+line(a,ga)+'</div>'+
+    '<div class="brow'+(sc&&sc[1]>sc[0]?' win':'')+'">'+line(b,gb)+'</div>'+
+    '<div class="bv">'+timeLabel(m.utc)+' · '+dayLabel(m.utc)+' · 📍'+esc(m.venue)+'</div></div>';
+}
+function bracketHTML(now){
+  const order=[['Round of 32','R32'],['Round of 16','R16'],['Quarter-final','QF'],['Semi-final','SF'],['Final','FINAL']];
+  let h='<div class="bracket">';
+  order.forEach(([rd,ab])=>{
+    const ms=KO.filter(m=>m.round===rd);
+    h+='<div class="bcol"><div class="bch">'+ab+'</div><div class="bcol-in">'+ms.map(m=>bmatchHTML(m,now)).join('');
+    if(rd==='Final'){const tp=KO.filter(m=>m.round==='Third place');if(tp.length){h+='<div class="b3rd">3rd place</div>'+tp.map(m=>bmatchHTML(m,now)).join('');}}
+    h+='</div></div>';
+  });
+  return h+'</div>';
 }
 function renderTopScorers(){
   const el=document.getElementById('topScorers');if(!el)return;
